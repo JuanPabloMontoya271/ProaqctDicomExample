@@ -54,6 +54,7 @@ def create_app(test_config=None):
             data["distance"]=distance
             data["w"]= abs(w)*img.PixelSpacing[0]
             data["h"]= abs(h)*img.PixelSpacing[1]
+            
             data["coords"] = [x,y,w,h]
             res[w*h] = data
 
