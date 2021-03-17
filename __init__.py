@@ -58,6 +58,7 @@ def create_app(test_config=None):
             hu = huMap[x:x+w,y:y+h]
             center = ((x+w)//2, (y+h)//2)
             
+
             
             distance = ((((x+w)/2 -huMap.shape[0]/2)*img.PixelSpacing[0])**2 +(((y+h)/2- huMap.shape[1]/2)*img.PixelSpacing[1])**2)**0.
             
@@ -67,10 +68,19 @@ def create_app(test_config=None):
             data["distance"]=distance
             data["w"]= abs(w)*img.PixelSpacing[0]
             data["h"]= abs(h)*img.PixelSpacing[1]
-            
+            data["center"] = center
             data["coords"] = [x,y,w,h]
             res[w*h] = data
-
+        
+        c = res[list(res.keys())[-1]]["center"]
+        coords =res[list(res.keys())[-1]]["coords"]
+        
+        sampleA =huMap[c[0]-25:c[0]+25,c[1]-25:c[1]+25 ]
+        sampleB =huMap[coords[0]-50:coords[0], coords[1]:coords[1]+50]
+        
+        res[list(res.keys())[-1]]["sampleA"] = [sampleA.mean(), sampleA.std()]
+        res[list(res.keys())[-1]]["sampleB"] = [sampleB.mean(), sampleB.std()]
+        
         return jsonify(res)
     
     @app.route("/get-image/<image_name>")
