@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from flask import Flask, send_file, send_from_directory, safe_join, abort, render_template, url_for, jsonify
 from flask_cors import CORS
-
+import boto3
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
@@ -33,10 +33,18 @@ def create_app(test_config=None):
     # a simple page that says hello
     @app.route('/hello')
     def hello():
+        client = boto3.client("s3",region_name="us-east-2",
+                          aws_access_key_id="AKIAQMXFNQFGDTPB77J2",
+                          aws_secret_access_key="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")
+        response = client.generate_presigned_url('get_object',Params={'Bucket': "proaqc-dicom-node",'Key':  'media/DICOM/Alleghany Regional Hospital/CT/Daily_QC/GE MEDICAL SYSTEMS/LightSpeed Pro 16/ct16/20140805/20140805.dcm'},ExpiresIn=100)
+        print(response)
+
         return render_template("./viewer/viewer.html")
     @app.route('/get_segmentation/<image_name>')
     def get_segmentation(image_name):
         img =pydicom.read_file("C:/Users/juanp/Desktop/Apps/DicomFlask/images/"+image_name)
+        rs,ri = img.RescaleSlope, img.RescaleIntercept
+        huMap = img.pixel_array*rs+ri
         res = {}
         pix = np.float32(img.pixel_array)/2**16*2**8
         r, img_t =cv2.threshold(pix, pix.max()*.3, pix.max(), 0  )
@@ -47,9 +55,14 @@ def create_app(test_config=None):
             x, y, w, h=cv2.boundingRect(contour)
             rect =cv2.rectangle(img_t.copy(), (x, y), (x + w - 1, y + h - 1), 255, 2)
             p = pix[x:x+w, y:y+h ]
-            distance = ((((x+w)/2 -512/2)*img.PixelSpacing[0])**2 +(((y+h)/2- 512/2)*img.PixelSpacing[1])**2)**0.5
-            data["mean"]=p.mean()
-            data["std"]=p.std()
+            hu = huMap[x:x+w,y:y+h]
+            center = ((x+w)//2, (y+h)//2)
+            
+            
+            distance = ((((x+w)/2 -huMap.shape[0]/2)*img.PixelSpacing[0])**2 +(((y+h)/2- huMap.shape[1]/2)*img.PixelSpacing[1])**2)**0.
+            
+            data["mean"]=hu.mean()
+            data["std"]=hu.std()
             data["area"]=w*img.PixelSpacing[0]*h*img.PixelSpacing[1]
             data["distance"]=distance
             data["w"]= abs(w)*img.PixelSpacing[0]

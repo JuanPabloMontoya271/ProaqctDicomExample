@@ -183,6 +183,8 @@
 <script src="url_for('static', filename ='/utils/initializeWebWorkers.js')"></script>
 
 <script>
+    let res;
+    let loadedData =false;
     cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
 
     cornerstoneWADOImageLoader.configure({
@@ -281,17 +283,27 @@
             alert(err);
         }
     }
+    function displayData(res){
+        for (var element in res){
+        let title =document.createElement("b")
+                    title.textContent=`ROI Id: ${element}`
+                    document.getElementById("data-placeholder").append(title)
+                    document.getElementById("data-placeholder").append(document.createElement("br"))
+                    for (var el in res[element]){
+                        let child  =document.createElement("span")
+                        
+                        child.textContent = el+" : "+ res[element][el]
 
-    function downloadAndView() {
-        document.getElementById("data-placeholder").innerHTML=''
-        let name =document.getElementById("wadoURL").value.split("/")
-        name = name[name.length-1]
-        console.log(name);
-        fetch("http://127.0.0.1:5000/get_segmentation/"+name).then(function(response){
-            response.text().then(function(text) {
-                console.log();
-                var res = JSON.parse(text)
-                const c = document.getElementById("dicomImage").children[0]
+                        document.getElementById("data-placeholder").append(child)
+                        document.getElementById("data-placeholder").append(document.createElement("br"))
+                        
+         
+                    }}
+
+
+    }
+    function RoiBox(res){
+        const c = document.getElementById("dicomImage").children[0]
                 console.log(c);
                 var width = c.width;
                 var height = c.height;
@@ -306,21 +318,26 @@
                     let coords = res[element].coords
                     ctx.rect(coords[0]/512*width,coords[1]/512*height, coords[2]/512*width, coords[3]/512*height);
                     ctx.stroke();
-                    let title =document.createElement("b")
-                    title.textContent=`ROI Id: ${element}`
-                    document.getElementById("data-placeholder").append(title)
-                    document.getElementById("data-placeholder").append(document.createElement("br"))
-                    for (var el in res[element]){
-                        let child  =document.createElement("span")
-                        
-                        child.textContent = el+" : "+ res[element][el]
-
-                        document.getElementById("data-placeholder").append(child)
-                        document.getElementById("data-placeholder").append(document.createElement("br"))
-                        
-         
-                    }
+                    
                 }
+
+
+    }
+    function reset(){
+
+        let placeholder = document.getElementById("data-placeholder")
+        placeholder.innerHTML=""
+    }
+    function downloadAndView() {
+        document.getElementById("data-placeholder").innerHTML=''
+        let name =document.getElementById("wadoURL").value.split("/")
+        name = name[name.length-1]
+        console.log(name);
+        fetch("http://127.0.0.1:5000/get_segmentation/"+name).then(function(response){
+            response.text().then(function(text) {
+                console.log();
+                res = JSON.parse(text)
+                
                
             })
         })
@@ -350,7 +367,18 @@
 
     var element = document.getElementById('dicomImage');
     cornerstone.enable(element);
+    downloadAndView();
+    function onImageRendered(e){
+        if (!loadedData){
+        displayData(res);
+        loadedData = true
+        }
+        RoiBox(res);
+        
 
+        
+    }
+    element.addEventListener('cornerstoneimagerendered', onImageRendered);
     document.getElementById('downloadAndView').addEventListener('click', function(e) {
         downloadAndView();
     });
