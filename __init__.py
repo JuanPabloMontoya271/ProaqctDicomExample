@@ -56,11 +56,11 @@ def create_app(test_config=None):
             rect =cv2.rectangle(img_t.copy(), (x, y), (x + w - 1, y + h - 1), 255, 2)
             p = pix[x:x+w, y:y+h ]
             hu = huMap[x:x+w,y:y+h]
-            center = ((x+w)//2, (y+h)//2)
+            center = ((2*x+w)//2, (2*y+h)//2)
             
 
             
-            distance = ((((x+w)/2 -huMap.shape[0]/2)*img.PixelSpacing[0])**2 +(((y+h)/2- huMap.shape[1]/2)*img.PixelSpacing[1])**2)**0.
+            distance = ((((2*x+w)/2 -huMap.shape[0]/2)*img.PixelSpacing[0])**2 +(((2*y+h)/2- huMap.shape[1]/2)*img.PixelSpacing[1])**2)**0.5
             
             data["mean"]=hu.mean()
             data["std"]=hu.std()
@@ -72,14 +72,31 @@ def create_app(test_config=None):
             data["coords"] = [x,y,w,h]
             res[w*h] = data
         
-        c = res[list(res.keys())[-1]]["center"]
-        coords =res[list(res.keys())[-1]]["coords"]
+        max_area = max(list(res.keys()))
         
-        sampleA =huMap[c[0]-25:c[0]+25,c[1]-25:c[1]+25 ]
-        sampleB =huMap[coords[0]-50:coords[0], coords[1]:coords[1]+50]
-        
-        res[list(res.keys())[-1]]["sampleA"] = [sampleA.mean(), sampleA.std()]
-        res[list(res.keys())[-1]]["sampleB"] = [sampleB.mean(), sampleB.std()]
+        max_area_obj = res[max_area]
+        c = max_area_obj['center']
+        coords = max_area_obj['coords']
+        print("c: ", c, "Coords: ", coords)
+        signal = huMap[c[0]-25:c[0]+25, c[1]-25:c[1]+25]
+        res[1]={"coords": [c[0]-25, c[1]-25, 50,50], "mean": signal.mean(), "std": signal.std()}
+        p= coords[0]>=50
+        q = coords[1]>=50
+        message = "Noise Calculation"
+        if p and q:
+            n_coords =[coords[0]-50, coords[1]-50, 50,50] 
+            noise = huMap[coords[0]-50: coords[0], coords[1]-50: coords[1]]
+        elif p and not q:
+            n_coords =[coords[0]-50, coords[1], 50,50]
+            noise = huMap[coords[0]-50: coords[0], coords[1]: coords[1]+50]
+        elif not p and q:
+            n_coords =[coords[0], coords[1]-50, 50,50]
+            noise  =huMap[coords[0]: coords[0]+50, coords[1]-50: coords[1]]
+        elif not p and not q:
+            n_coords =[coords[0], coords[1], 50,50]
+            noise = huMap[coords[0]:coords[0]+50, coords[1]:coords[1]+50]
+            message = "No space left"
+        res[0]={"coords": n_coords, "message": message, "mean": noise.mean(), "std": noise.std()}
         
         return jsonify(res)
     
